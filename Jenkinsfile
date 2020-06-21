@@ -9,7 +9,11 @@ pipeline {
                     }
                }
              }
-              stage('Test-Result') {
-            // Run the maven build
-            junit 'target/surefire-reports/*.xml'
+              stage ('Testing Stage') {
+
+            steps {
+                withMaven(maven : 'maven_3_5_0') {
+                    sh 'mvn test'
+                }
             }
+        }
