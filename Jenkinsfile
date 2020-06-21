@@ -5,8 +5,36 @@ pipeline {
             steps {
                 echo 'Running build automation'
                 sh script: 'mvn clean package'
-                archiveArtifacts artifacts: 'target/Spring3Hibernate.war'
+                        }
+                    }
+               }
+             }
+              stage('DeployToStaging') {
+            when {
+                branch 'master'
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'webserver_login', usernameVariable: 'Username', passwordVariable: 'Password')]) {
+                    sshPublishe
+                        failOnError: true,
+                        continueOnError: false,
+                        publishers: [
+                            sshPublisherDesc(
+                                configName: 'staging',
+                                sshCredentials: [
+                                    username: "$Username",
+                                    encryptedPassphrase: "$Password"
+                                ], 
+                                transfers: [
+                                    sshTransfer(
+                                        sourceFiles: '**/*.war',
+                                        remoteDirectory: '/Weabapps',
+                                        execCommand: 'sudo /usr/bin/systemctl stop train-schedule && rm -rf /opt/train-schedule/* && unzip /tmp/trainSchedule.zip -d /opt/train-schedule && sudo /usr/bin/systemctl start train-schedule'
+                                    )
+                                ]
+                            )
+                        ]
+                    )
+                }
             }
         }
-    }
-}
