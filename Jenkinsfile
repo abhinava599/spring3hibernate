@@ -7,11 +7,11 @@ pipeline {
                 sh script: 'mvn clean package'
             }
         }
-        stage (deploy to tomcat)
+        stage ('deploy to tomcat')
         { 
            steps {
               sshagent(['tomcatdev']) {
-                         sh 'scp -o StrictHostKeyChecking=no **/*.war vagrant@http:172.16.0.251:/var/lib/tomcat/webapps'
+                         sh 'scp -o StrictHostKeyChecking=no */target/*/*.war vagrant@http:172.16.0.251:/var/lib/tomcat/webapps'
                          }
                  }
         }
