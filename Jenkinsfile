@@ -11,7 +11,7 @@ pipeline {
         { 
            steps {
               sshagent(['tomcatdev']) {
-                         sh 'scp -o StrictHostKeyChecking=no */target/*/*.war vagrant@http:172.16.0.251:/var/lib/tomcat/webapps'
+                         sh 'scp -o StrictHostKeyChecking=no */target/*/*.war vagrant@http:172.16.0.251:/opt/tomcat/webapps'
                          }
                  }
         }
@@ -19,3 +19,5 @@ pipeline {
     }
 }
          
+
+
