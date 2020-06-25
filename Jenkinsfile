@@ -11,11 +11,13 @@ pipeline {
         { 
            steps {
               sshagent(['tomcatdev']) {
+                         sh "ssh -T 'vagrant@172.16.0.251' /opt/tomcat/bin/./shutdown.sh"
+                         sh "ssh -T 'vagrant@172.16.0.251' rm -f /opt/tomcat/webapps/Spring3HibernateApp.war rm -fr /opt/tomcat/webapps/Spring3HibernateApp"
                          sh 'scp -o StrictHostKeyChecking=no **/*.war vagrant@172.16.0.251:/opt/tomcat/webapps'
+                         sh "ssh -T 'vagrant@172.16.0.251' /opt/tomcat/bin/./startup.sh"
                          }
                  }
         }
 
     }
 }
-         
