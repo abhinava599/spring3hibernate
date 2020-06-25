@@ -1,64 +1,24 @@
-node {
-        def mvnHome
-        mvnHome = tool 'Maven 3.5.2'
-        def servers = ["192.168.1.72"]
-        try {
-        stage('Preparation') { // for display purposes Get some code from a GitHub repository
-            git 'https://github.com/abhinava599/spring3hibernate'
-            // Get the Maven tool.
-            // ** NOTE: This 'M3' Maven tool must be configured
-            // **       in the global configuration.   
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            steps {
+                echo 'Running build automation'
+                sh script: 'mvn clean package'
             }
-        stage('clean') {
-            // Run the maven build
-            sh "'${mvnHome}/bin/mvn' -Dmaven.test.failure.ignore clean"
-            }
-   
-        stage('compile') {
-            // Run the maven build
-            sh "'${mvnHome}/bin/mvn' -Dmaven.test.failure.ignore compile"
-            }
-   
-        stage('testing') {
-            // Run the maven build
-            sh "'${mvnHome}/bin/mvn' -Dmaven.test.failure.ignore test"
-            }
-   
-        stage('packing') {
-            // Run the maven build
-            sh "'${mvnHome}/bin/mvn' -Dmaven.test.failure.ignore package"
-            }
-        stage('Test-Result') {
-            // Run the maven build
-            junit 'target/surefire-reports/*.xml'
-            }
-        for (server in servers)
+        }
+        stage ('deploy to tomcat')
         { 
-                stage('Stop Tomcat') {
-                sh "ssh -T 'root@${server}' /opt/apache-tomcat-8.5.31/bin/./shutdown.sh"
-                }
-        
-                stage('War File Deployment') {
-                sh "ssh -T 'root@${server}' rm -f /opt/apache-tomcat-8.5.31/webapps/petclinic.war rm -fr /opt/apache-tomcat-8.5.31/webapps/Spring3HibernateApp"
-                sh "scp target/Spring3HibernateApp.war 'root@${server}':/opt/apache-tomcat-8.5.31/webapps/"
-                }
-                stage('Start Tomcat') {
-                sh "ssh -T 'root@${server}' /opt/apache-tomcat-8.5.31/bin/./startup.sh"
-                }
+           steps {
+              sshagent(['tomcatdev']) {
+                         sh "ssh -T 'vagrant@172.16.0.251' /opt/tomcat/bin/./shutdown.sh"
+                         sh "ssh -T 'vagrant@172.16.0.251' rm -f /opt/tomcat/webapps/Spring3HibernateApp.war rm -fr /opt/tomcat/webapps/Spring3HibernateApp"
+                         sh 'scp -o StrictHostKeyChecking=no **/*.war vagrant@172.16.0.251:/opt/tomcat/webapps'
+                         sh "ssh -T 'vagrant@172.16.0.251' /opt/tomcat/bin/./startup.sh"
+                         }
+                 }
         }
-        notify('Sucess')
-        }
-catch (err) {
-notify("Error ${err}")
-CurrentBuid.result = 'FAILURE'
-}
-}
-def notify(status){ 
-    emailext (
-      to: "abhinava599@gmail.com",
-      subject: "${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-      body: """<p>${status}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p>
-        <p>Check console output at <a href='${env.BUILD_URL}'>${env.JOB_NAME} [${env.BUILD_NUMBER}]</a></p>""",
-    )
+
+    }
 }
 
