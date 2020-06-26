@@ -12,6 +12,7 @@ pipeline {
            steps {
               sshagent(['tomcatdev']) {
                          sh 'scp -o StrictHostKeyChecking=no **/*.war vagrant@172.16.0.251:/opt/tomcat/webapps'
+                         sh 'vagrant@172.16.0.251:/opt/tomcat/bin./startup.sh
                          }
                  }
         }
