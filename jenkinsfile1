@@ -3,22 +3,114 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                echo 'Running build automation'
-                sh script: 'mvn clean package'
+                echo 'Running build'
+                sh script: 'mvn clean package'  
             }
         }
-        stage ('deploy to tomcat')
-        { 
-           steps {
-              sshagent(['tomcatdev']) {
-                         sh "ssh -T 'vagrant@172.16.0.251' /opt/tomcat/bin/./shutdown.sh"
-                         sh "ssh -T 'vagrant@172.16.0.251' rm -f /opt/tomcat/webapps/Spring3HibernateApp.war rm -fr /opt/tomcat/webapps/Spring3HibernateApp"
-                         sh 'scp -o StrictHostKeyChecking=no **/*.war vagrant@172.16.0.251:/opt/tomcat/webapps'
-                         sh "ssh -T 'vagrant@172.16.0.251' /opt/tomcat/bin/./startup.sh"
-                         }
-                 }
+		
+		# deployment to lower region staging 
+        stage('DeployToStaging') {
+            when {
+                branch 'master'
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'webserver', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
+                    sshPublisher(
+                        failOnError: true,
+                        continueOnError: false,
+                        publishers: [
+                            sshPublisherDesc(
+                                configName: 'staging',
+                                sshCredentials: [
+                                    username: "$USERNAME",
+                                    encryptedPassphrase: "$USERPASS"
+                                ], 
+								#Copying or transfering war from jenkins server to tomcat 
+                                transfers: [
+                                    sshTransfer(
+                                        sourceFiles: 'target/Spring3HibernateApp.war',
+                                        remoteDirectory: '/tmp',
+										#stopping and starting service
+                                        execCommand: 'sudo /usr/bin/systemctl stop Spring3HibernateApp && sudo /usr/bin/systemctl start Spring3HibernateApp'
+                                    )
+                                ]
+                            )
+                        ]
+                    )
+                }
+            }
         }
-
+}
+\
+#deploy to producrion
+        stage('DeployToProduction') {
+            when {
+                branch 'master'
+            }
+            steps {
+			     #Approver to approve 
+                input 'Does the staging environment look OK?'
+                milestone(1)
+                withCredentials([usernamePassword(credentialsId: 'webserver1', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
+                    sshPublisher(
+                        failOnError: true,
+                        continueOnError: false,
+                        publishers: [
+                            sshPublisherDesc(
+                                configName: 'production',
+                                sshCredentials: [
+                                    username: "$USERNAME",
+                                    encryptedPassphrase: "$USERPASS"
+                                ], 
+                                transfers: [
+                                        sourceFiles: 'target/Spring3HibernateApp.war',
+                                        remoteDirectory: '/tmp',
+										#stopping and starting service
+                                        execCommand: 'sudo /usr/bin/systemctl stop Spring3HibernateApp && sudo /usr/bin/systemctl start Spring3HibernateApp'
+                                    )
+                                ]
+                            )
+                        ]
+                    )
+                }
+            }
+        }
     }
 }
 
+
+
+stage('DeployToProduction') {
+            when {
+                branch 'master'
+            }
+            steps {
+			     #Approver to approve 
+                input 'Does the staging environment look OK?'
+                milestone(1)
+                withCredentials([usernamePassword(credentialsId: 'webserver1', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
+                    sshPublisher(
+                        failOnError: true,
+                        continueOnError: false,
+                        publishers: [
+                            sshPublisherDesc(
+                                configName: 'production',
+                                sshCredentials: [
+                                    username: "$USERNAME",
+                                    encryptedPassphrase: "$USERPASS"
+                                ], 
+                                transfers: [
+                                        sourceFiles: 'target/Spring3HibernateApp.war',
+                                        remoteDirectory: '/tmp',
+										#stopping and starting service
+                                        execCommand: 'sudo /usr/bin/systemctl stop Spring3HibernateApp && sudo /usr/bin/systemctl start Spring3HibernateApp'
+                                    )
+                                ]
+                            )
+                        ]
+                    )
+                }
+            }
+        }
+    }
+}
